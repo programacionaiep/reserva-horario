@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reserva de Horarios</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2332;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #e8eaf0;
+    --text2: #7c8299;
+    --text3: #4a5068;
+    --accent: #6c8fff;
+    --accent2: #3d5bd9;
+    --green: #3ecf8e;
+    --green-bg: rgba(62,207,142,0.12);
+    --green-border: rgba(62,207,142,0.25);
+    --blue-bg: rgba(108,143,255,0.12);
+    --blue-border: rgba(108,143,255,0.3);
+    --red: #ff6b6b;
+    --red-bg: rgba(255,107,107,0.1);
+    --red-border: rgba(255,107,107,0.25);
+    --amber: #ffc657;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(108,143,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(108,143,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; position: relative; z-index: 1; }
+  .header { margin-bottom: 2.5rem; }
+  .header h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 0.25rem; }
+  .header h1 span { color: var(--accent); }
+  .header p { font-size: 0.875rem; color: var(--text2); font-weight: 300; }
+  .controls { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-bottom: 2rem; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'DM Mono', monospace; }
+  .field-group input { height: 40px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 0 14px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; transition: border-color 0.2s; }
+  .field-group input:focus { border-color: var(--accent); }
+  .field-group input[type="text"] { width: 180px; }
+  .field-group input[type="date"] { width: 160px; color-scheme: dark; }
+  .nav-btns { display: flex; gap: 6px; align-self: flex-end; }
+  .btn { height: 40px; padding: 0 18px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+  .btn:hover { background: var(--surface); border-color: var(--accent); color: var(--text); }
+  .btn svg { width: 16px; height: 16px; }
+
+  /* Sync bar */
+  .sync-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; transition: all 0.3s; }
+  .sync-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .sync-dot.warn { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .sync-dot.pulse { background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+  .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1.75rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 18px; min-width: 110px; }
+  .stat .val { font-size: 22px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--text); line-height: 1; }
+  .stat .lbl { font-size: 11px; color: var(--text3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat.accent-stat { border-color: var(--blue-border); }
+  .stat.accent-stat .val { color: var(--accent); }
+  .stat.green-stat { border-color: var(--green-border); }
+  .stat.green-stat .val { color: var(--green); }
+  .week-label { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; }
+  .week-label .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .week-label span { font-size: 13px; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .grid-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .grid { display: grid; overflow-x: auto; }
+  .grid-row { display: grid; grid-template-columns: 90px repeat(5, 1fr); border-bottom: 1px solid var(--border); }
+  .grid-row:last-child { border-bottom: none; }
+  .grid-row.header-row { background: var(--surface2); }
+  .hcell { padding: 14px 10px; text-align: center; border-right: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--text2); letter-spacing: 0.04em; }
+  .hcell:last-child { border-right: none; }
+  .hcell .dia-num { display: block; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); margin-top: 2px; font-weight: 400; }
+  .hcell.hoy-col { color: var(--accent); }
+  .hcell.hoy-col .dia-num { color: rgba(108,143,255,0.6); }
+  .tcell { padding: 10px 12px; border-right: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; background: var(--surface2); }
+  .tcell .t1 { font-size: 13px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text); }
+  .tcell .t2 { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); margin-top: 2px; }
+  .scell { border-right: 1px solid var(--border); display: flex; align-items: center; justify-content: center; min-height: 68px; cursor: pointer; transition: background 0.15s; position: relative; overflow: hidden; }
+  .scell:last-child { border-right: none; }
+  .scell::before { content: '+'; font-size: 18px; color: var(--text3); opacity: 0; transition: opacity 0.15s; position: absolute; }
+  .scell:hover::before { opacity: 1; }
+  .scell:hover { background: rgba(108,143,255,0.06); }
+  .scell.bloqueado { background: rgba(255,255,255,0.01); cursor: not-allowed; }
+  .scell.bloqueado::before { display: none; }
+  .scell.bloqueado:hover { background: rgba(255,255,255,0.01); }
+  .scell.reservado { background: var(--green-bg); cursor: pointer; }
+  .scell.reservado::before { display: none; }
+  .scell.reservado:hover { background: rgba(62,207,142,0.2); }
+  .badge-wrap { text-align: center; padding: 4px 6px; width: 100%; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.02em; line-height: 1.4; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge.res { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge.dash { color: var(--text3); font-size: 14px; }
+  .slot-actions { display: flex; justify-content: center; gap: 6px; margin-top: 5px; }
+  .slot-btn { font-size: 10px; padding: 2px 8px; border-radius: 10px; border: 1px solid; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; background: transparent; }
+  .slot-btn.edit { color: var(--accent); border-color: var(--blue-border); }
+  .slot-btn.edit:hover { background: var(--blue-bg); }
+  .slot-btn.del { color: var(--red); border-color: var(--red-border); }
+  .slot-btn.del:hover { background: var(--red-bg); }
+  .turno-sep .label { padding: 6px 14px; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); font-family: 'DM Mono', monospace; display: flex; align-items: center; gap: 8px; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .turno-sep .label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 1.5rem; }
+  .leg-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+  .leg-dot { width: 12px; height: 12px; border-radius: 3px; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); z-index: 200; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 2rem; width: 380px; max-width: 92vw; box-shadow: 0 30px 80px rgba(0,0,0,0.6); animation: modalIn 0.2s ease; }
+  @keyframes modalIn { from{opacity:0;transform:translateY(16px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);} }
+  .modal-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 1rem; }
+  .modal-icon.blue { background: var(--blue-bg); border: 1px solid var(--blue-border); }
+  .modal-icon.green { background: var(--green-bg); border: 1px solid var(--green-border); }
+  .modal h3 { font-size: 18px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.02em; }
+  .modal .sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; font-family: 'DM Mono', monospace; line-height: 1.5; }
+  .modal label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 6px; }
+  .modal input { width: 100%; height: 42px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 0 14px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; transition: border-color 0.2s; margin-bottom: 1.25rem; }
+  .modal input:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-cancel { height: 40px; padding: 0 16px; background: transparent; border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text2); font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
+  .btn-cancel:hover { border-color: var(--text3); color: var(--text); }
+  .btn-primary { height: 40px; padding: 0 20px; background: var(--accent2); border: 1px solid var(--accent); border-radius: var(--radius-sm); color: #fff; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
+  .btn-primary:hover { background: var(--accent); }
+  .btn-danger { height: 40px; padding: 0 20px; background: var(--red-bg); border: 1px solid var(--red-border); border-radius: var(--radius-sm); color: var(--red); font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
+  .btn-danger:hover { background: rgba(255,107,107,0.2); }
+  .manage-info { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 1.25rem; }
+  .manage-info .mi-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; font-family: 'DM Mono', monospace; margin-bottom: 4px; }
+  .manage-info .mi-val { font-size: 14px; color: var(--text); font-weight: 500; }
+  .divider { height: 1px; background: var(--border); margin: 1rem 0; }
+  .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--surface2); border: 1px solid var(--green-border); color: var(--green); padding: 12px 22px; border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Mono', monospace; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 300; white-space: nowrap; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.red { border-color: var(--red-border); color: var(--red); }
+  .toast.warn { border-color: rgba(255,198,87,0.3); color: var(--amber); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Sistema de <span>Reservas</span></h1>
+    <p>Bloques de 1 hora 20 minutos · Lunes a Viernes · Sincronizado con Google Sheets</p>
+  </div>
+
+  <div class="controls">
+    <div class="field-group">
+      <label>Tu nombre</label>
+      <input type="text" id="nombreInput" placeholder="Nombre completo" />
+    </div>
+    <div class="field-group">
+      <label>Ir a fecha</label>
+      <input type="date" id="fechaInput" />
+    </div>
+    <div class="nav-btns">
+      <button class="btn" onclick="cambiarSemana(-1)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L5 8l5 5"/></svg>
+        Anterior
+      </button>
+      <button class="btn" onclick="cambiarSemana(1)">
+        Siguiente
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+      <button class="btn" onclick="cargarDesdeSheets()" title="Recargar desde Google Sheets">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.8 0 3.4.87 4.4 2.2M13.5 2v3h-3"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-dot pulse" id="syncDot"></div>
+    <span id="syncMsg">Conectando con Google Sheets...</span>
+  </div>
+
+  <div id="statsBar" class="stats-bar"></div>
+
+  <div class="week-label">
+    <div class="dot"></div>
+    <span id="semanaLbl"></span>
+  </div>
+
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(62,207,142,0.2);border:1px solid rgba(62,207,142,0.4);"></div> Reservado (clic para editar/eliminar)</div>
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);"></div> Libre</div>
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04);"></div> No disponible</div>
+  </div>
+</div>
+
+<!-- Modal nueva reserva -->
+<div class="modal-bg" id="modalReserva">
+  <div class="modal">
+    <div class="modal-icon blue">📅</div>
+    <h3>Reservar bloque</h3>
+    <div class="sub" id="modalReservaSub"></div>
+    <label>Nombre del alumno</label>
+    <input type="text" id="modalNombre" placeholder="Nombre completo" />
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModales()">Cancelar</button>
+      <button class="btn-primary" onclick="confirmarReserva()">Confirmar reserva</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal gestionar reserva -->
+<div class="modal-bg" id="modalGestionar">
+  <div class="modal">
+    <div class="modal-icon green">✏️</div>
+    <h3>Gestionar reserva</h3>
+    <div class="sub" id="modalGestionarSub"></div>
+    <div class="manage-info">
+      <div class="mi-label">Alumno actual</div>
+      <div class="mi-val" id="mgNombreActual"></div>
+    </div>
+    <label>Nuevo nombre</label>
+    <input type="text" id="mgNombreNuevo" placeholder="Escribe el nombre nuevo" />
+    <div class="modal-actions" style="flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-cancel" onclick="cerrarModales()">Cancelar</button>
+        <button class="btn-primary" onclick="confirmarEdicion()">Guardar cambio</button>
+      </div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn-danger" onclick="confirmarEliminar()">Eliminar reserva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbxYCH0lKYHCEeEWeR7uueTPmck_HRfM_qPga_TLjBV6c3_sGILUGltiqA1oDEmZ7ewxGQ/exec';
+const LS_KEY  = 'reservas_v3';
+
+const BLOCK = 80;
+const DIAS_FULL = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmt(min){ return pad(Math.floor(min/60))+':'+pad(min%60); }
+function toMin(h,m){ return h*60+m; }
+
+const AM_START=toMin(10,0), AM_END=toMin(13,0);
+const PM_START=toMin(14,15), PM_END_N=toMin(19,0), PM_END_V=toMin(18,0);
+
+function getBloques(diaIdx){
+  let pm=diaIdx===4?PM_END_V:PM_END_N, bl=[], s=AM_START;
+  while(s+BLOCK<=AM_END){bl.push({desde:fmt(s),hasta:fmt(s+BLOCK),min:s,turno:'mañana'});s+=BLOCK;}
+  s=PM_START;
+  while(s+BLOCK<=pm){bl.push({desde:fmt(s),hasta:fmt(s+BLOCK),min:s,turno:'tarde'});s+=BLOCK;}
+  return bl;
+}
+function getAllBloques(){
+  let seen=new Set(),all=[];
+  for(let d=0;d<5;d++) getBloques(d).forEach(b=>{if(!seen.has(b.min)){seen.add(b.min);all.push(b);}});
+  return all.sort((a,b)=>a.min-b.min);
+}
+
+let baseDate=new Date();
+while([0,6].includes(baseDate.getDay())) baseDate.setDate(baseDate.getDate()+1);
+let reservas={}, pendiente=null;
+
+// ---- LocalStorage ----
+function guardarLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(reservas)); }catch(e){} }
+function cargarLocal(){
+  try{ const d=localStorage.getItem(LS_KEY); if(d) reservas=JSON.parse(d); }catch(e){ reservas={}; }
+}
+
+// ---- Sync status ----
+function setSyncStatus(estado, msg){
+  document.getElementById('syncDot').className='sync-dot '+estado;
+  document.getElementById('syncMsg').textContent=msg;
+}
+
+// ---- Google Sheets ----
+async function cargarDesdeSheets(){
+  setSyncStatus('pulse','Cargando desde Google Sheets...');
+  try {
+    const res = await fetch(API_URL+'?t='+Date.now());
+    const data = await res.json();
+    reservas={};
+    data.forEach(row=>{
+      if(!row.fecha||!row.nombre||!row.desde) return;
+      const [hh,mm]=String(row.desde).split(':').map(Number);
+      const min=hh*60+mm;
+      const key=String(row.fecha)+'_'+min;
+      reservas[key]={nombre:String(row.nombre),desde:String(row.desde),hasta:String(row.hasta)};
+    });
+    guardarLocal();
+    render();
+    const now=new Date();
+    setSyncStatus('ok',`Sincronizado · ${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  } catch(e){
+    setSyncStatus('warn','Sin conexión a Sheets · usando datos locales');
+  }
+}
+
+async function guardarEnSheets(){
+  try {
+    await fetch(API_URL,{
+      method:'POST',
+      body:JSON.stringify({action:'sync', data:reservas})
+    });
+    const now=new Date();
+    setSyncStatus('ok',`Guardado en Sheets · ${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  } catch(e){
+    setSyncStatus('warn','Cambio guardado localmente · sin conexión a Sheets');
+  }
+}
+
+function guardar(){
+  guardarLocal();
+  guardarEnSheets(); // en background
+}
+
+// ---- Helpers ----
+function dateKey(d){ return d.toISOString().slice(0,10); }
+function getWeekStart(d){
+  let dd=new Date(d),day=dd.getDay(),diff=day===0?-6:1-day;
+  dd.setDate(dd.getDate()+diff); return dd;
+}
+function getDiaFecha(idx){
+  let ws=getWeekStart(baseDate),d=new Date(ws);
+  d.setDate(d.getDate()+idx); return d;
+}
+function slotKey(di,min){ return dateKey(getDiaFecha(di))+'_'+min; }
+function semanaLabel(){
+  let ws=getWeekStart(baseDate),we=new Date(ws);
+  we.setDate(we.getDate()+4);
+  return ws.getDate()+' de '+MESES[ws.getMonth()]+' – '+we.getDate()+' de '+MESES[we.getMonth()]+' '+we.getFullYear();
+}
+function nombreGuardado(){ return document.getElementById('nombreInput').value.trim(); }
+
+function countStats(){
+  let total=0,libre=0,ocupado=0;
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  for(let di=0;di<5;di++){
+    if(getDiaFecha(di)<hoy) continue;
+    getBloques(di).forEach(b=>{
+      total++;
+      reservas[slotKey(di,b.min)] ? ocupado++ : libre++;
+    });
+  }
+  return {total,libre,ocupado};
+}
+
+// ---- Render ----
+function render(){
+  document.getElementById('semanaLbl').textContent='Semana del '+semanaLabel();
+  const fi=document.getElementById('fechaInput');
+  if(!fi.value) fi.value=dateKey(baseDate);
+
+  const allBloques=getAllBloques();
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const hoyKey=dateKey(hoy);
+  const s=countStats();
+
+  document.getElementById('statsBar').innerHTML=`
+    <div class="stat"><div class="val">${s.total}</div><div class="lbl">Total bloques</div></div>
+    <div class="stat green-stat"><div class="val">${s.libre}</div><div class="lbl">Disponibles</div></div>
+    <div class="stat accent-stat"><div class="val">${s.ocupado}</div><div class="lbl">Reservados</div></div>
+  `;
+
+  let html='';
+  html+='<div class="grid-row header-row"><div class="hcell"></div>';
+  for(let di=0;di<5;di++){
+    let f=getDiaFecha(di),esHoy=dateKey(f)===hoyKey;
+    html+=`<div class="hcell${esHoy?' hoy-col':''}">${DIAS_FULL[di]}<span class="dia-num">${f.getDate()}/${pad(f.getMonth()+1)}</span></div>`;
+  }
+  html+='</div>';
+
+  let prevTurno=null;
+  allBloques.forEach(b=>{
+    if(b.turno!==prevTurno){
+      html+=`<div class="turno-sep"><div class="label">Turno ${b.turno}</div></div>`;
+      prevTurno=b.turno;
+    }
+    html+='<div class="grid-row">';
+    html+=`<div class="tcell"><span class="t1">${b.desde}</span><span class="t2">${b.hasta}</span></div>`;
+    for(let di=0;di<5;di++){
+      let disponible=getBloques(di).some(x=>x.min===b.min);
+      let fecha=getDiaFecha(di), pasado=fecha<hoy;
+      if(!disponible||pasado){
+        html+=`<div class="scell bloqueado">${!disponible?'<div class="badge-wrap"><span class="badge dash">—</span></div>':''}</div>`;
+      } else {
+        let key=slotKey(di,b.min), r=reservas[key];
+        if(r){
+          html+=`<div class="scell reservado" onclick="abrirGestionar('${key}','${b.desde}','${b.hasta}',${di})">`;
+          html+=`<div class="badge-wrap">`;
+          html+=`<span class="badge res" title="${r.nombre}">${r.nombre}</span>`;
+          html+=`<div class="slot-actions">`;
+          html+=`<button class="slot-btn edit" onclick="event.stopPropagation();abrirGestionar('${key}','${b.desde}','${b.hasta}',${di})">Editar</button>`;
+          html+=`<button class="slot-btn del" onclick="event.stopPropagation();eliminarDirecto('${key}','${b.desde}','${b.hasta}',${di})">Eliminar</button>`;
+          html+=`</div></div></div>`;
+        } else {
+          html+=`<div class="scell" onclick="abrirReservar('${key}','${b.desde}','${b.hasta}',${di},${b.min})"></div>`;
+        }
+      }
+    }
+    html+='</div>';
+  });
+  document.getElementById('grid').innerHTML=html;
+}
+
+// ---- Modales ----
+function abrirReservar(key,desde,hasta,di,min){
+  pendiente={key,desde,hasta,di,min,fecha:getDiaFecha(di)};
+  document.getElementById('modalReservaSub').textContent=`${DIAS_FULL[di]} ${getDiaFecha(di).getDate()}/${pad(getDiaFecha(di).getMonth()+1)}  ·  ${desde} – ${hasta}`;
+  document.getElementById('modalNombre').value='';
+  document.getElementById('modalNombre').style.borderColor='';
+  document.getElementById('modalReserva').classList.add('show');
+  setTimeout(()=>document.getElementById('modalNombre').focus(),50);
+}
+
+function abrirGestionar(key,desde,hasta,di){
+  let r=reservas[key]; if(!r) return;
+  pendiente={key,desde,hasta,di,fecha:getDiaFecha(di)};
+  document.getElementById('modalGestionarSub').textContent=`${DIAS_FULL[di]} ${getDiaFecha(di).getDate()}/${pad(getDiaFecha(di).getMonth()+1)}  ·  ${desde} – ${hasta}`;
+  document.getElementById('mgNombreActual').textContent=r.nombre;
+  document.getElementById('mgNombreNuevo').value=r.nombre;
+  document.getElementById('mgNombreNuevo').style.borderColor='';
+  document.getElementById('modalGestionar').classList.add('show');
+  setTimeout(()=>document.getElementById('mgNombreNuevo').focus(),50);
+}
+
+function cerrarModales(){
+  document.getElementById('modalReserva').classList.remove('show');
+  document.getElementById('modalGestionar').classList.remove('show');
+  pendiente=null;
+}
+
+// ---- Acciones ----
+function confirmarReserva(){
+  let nombre=document.getElementById('modalNombre').value.trim();
+  if(!nombre){document.getElementById('modalNombre').style.borderColor='var(--red)';return;}
+  document.getElementById('nombreInput').value=nombre;
+  reservas[pendiente.key]={nombre,desde:pendiente.desde,hasta:pendiente.hasta};
+  guardar(); cerrarModales(); render();
+  mostrarToast(`✓ Reserva guardada: ${pendiente.desde} – ${pendiente.hasta}`);
+}
+
+function confirmarEdicion(){
+  let nuevoNombre=document.getElementById('mgNombreNuevo').value.trim();
+  if(!nuevoNombre){document.getElementById('mgNombreNuevo').style.borderColor='var(--red)';return;}
+  const anterior=reservas[pendiente.key].nombre;
+  reservas[pendiente.key].nombre=nuevoNombre;
+  guardar(); cerrarModales(); render();
+  mostrarToast(`✓ ${anterior} → ${nuevoNombre}`);
+}
+
+function confirmarEliminar(){
+  const {key,desde,hasta}=pendiente;
+  const nombre=reservas[key].nombre;
+  delete reservas[key];
+  guardar(); cerrarModales(); render();
+  mostrarToast(`Reserva de ${nombre} eliminada`,'red');
+}
+
+function eliminarDirecto(key,desde,hasta,di){
+  let r=reservas[key]; if(!r) return;
+  if(confirm(`¿Eliminar la reserva de ${r.nombre}?\n${DIAS_FULL[di]} · ${desde} – ${hasta}`)){
+    delete reservas[key];
+    guardar(); render();
+    mostrarToast(`Reserva de ${r.nombre} eliminada`,'red');
+  }
+}
+
+function cambiarSemana(n){ baseDate.setDate(baseDate.getDate()+n*7); render(); }
+
+function mostrarToast(msg,tipo=''){
+  let t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(tipo?' '+tipo:'');
+  setTimeout(()=>t.className='toast',3200);
+}
+
+// ---- Eventos ----
+document.getElementById('fechaInput').addEventListener('change',function(){
+  let d=new Date(this.value+'T12:00:00');
+  if(!isNaN(d)){baseDate=d;render();}
+});
+document.getElementById('modalReserva').addEventListener('click',function(e){if(e.target===this)cerrarModales();});
+document.getElementById('modalGestionar').addEventListener('click',function(e){if(e.target===this)cerrarModales();});
+document.getElementById('modalNombre').addEventListener('keydown',function(e){if(e.key==='Enter')confirmarReserva();});
+document.getElementById('mgNombreNuevo').addEventListener('keydown',function(e){if(e.key==='Enter')confirmarEdicion();});
+document.getElementById('nombreInput').addEventListener('input',render);
+
+// ---- Inicio: primero local, luego Sheets ----
+cargarLocal();
+render();
+cargarDesdeSheets();
+</script>
+</body>
+</html>
